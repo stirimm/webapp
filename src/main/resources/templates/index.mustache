@@ -1,0 +1,23 @@
+{{> header}}
+
+<h1 class="title">Știri din Maramureș</h1>
+
+<div class="news">
+    {{#news}}
+        <article>
+            <div class="news-item">
+                <h2 class="news-title">
+                    <a href="{{url}}" target="_blank">{{title}}</a>
+                </h2>
+
+                <p class="news-description">{{description}} [...]</p>
+
+                <div class="news-meta">
+                    publicat de <strong>{{source}}</strong> cu <strong>{{addedAt}}</strong>
+                </div>
+            </div>
+        </article>
+    {{/news}}
+</div>
+
+{{> footer}}
