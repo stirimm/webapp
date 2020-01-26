@@ -26,9 +26,8 @@ class IndexController(
 
 }
 
-//////////////////
-
 fun News.render() = RenderedNews(
+        id = id,
         title = title,
         description = description,
         url = url,
@@ -37,6 +36,7 @@ fun News.render() = RenderedNews(
 )
 
 data class RenderedNews(
+        val id: Long,
         val title: String,
         val description: String,
         val url: String,
