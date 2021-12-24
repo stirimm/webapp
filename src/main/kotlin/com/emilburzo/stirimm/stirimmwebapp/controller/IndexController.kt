@@ -15,7 +15,7 @@ import java.util.*
  */
 @Controller
 class IndexController(
-        private val repository: NewsRepository
+    private val repository: NewsRepository
 ) {
 
     @GetMapping("/")
@@ -27,21 +27,21 @@ class IndexController(
 }
 
 fun News.render() = RenderedNews(
-        id = id,
-        title = title,
-        description = description,
-        url = url,
-        source = source,
-        addedAt = PrettyTime(Locale("ro")).format(Date.from(publishDate.atZone(ZoneOffset.UTC).toInstant()))
+    id = id,
+    title = title.ifBlank { "<Fără titlu>" },
+    description = description,
+    url = url,
+    source = source,
+    addedAt = PrettyTime(Locale("ro")).format(Date.from(publishDate.atZone(ZoneOffset.UTC).toInstant()))
 )
 
 data class RenderedNews(
-        val id: Long,
-        val title: String,
-        val description: String,
-        val url: String,
-        val source: String,
-        val addedAt: String
+    val id: Long,
+    val title: String,
+    val description: String,
+    val url: String,
+    val source: String,
+    val addedAt: String
 )
 
 
