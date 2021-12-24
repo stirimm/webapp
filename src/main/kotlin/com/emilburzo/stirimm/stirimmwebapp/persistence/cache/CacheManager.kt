@@ -14,7 +14,7 @@ fun cacheManager(): CacheManager {
     val newsCache = CaffeineCache(
         CACHE_NAME_RECENT_NEWS,
         Caffeine.newBuilder()
-            .expireAfterWrite(3, TimeUnit.MINUTES)
+            .expireAfterWrite(1, TimeUnit.MINUTES)
             .maximumSize(1)
             .recordStats()
             .build()
