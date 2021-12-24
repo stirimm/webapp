@@ -10,12 +10,12 @@ import javax.persistence.Id
  */
 @Entity
 class News(
-        @Id var id: Long,
-        @Column(name = "publish_date") var publishDate: LocalDateTime,
-        @Column(name = "ingest_date") var ingestDate: LocalDateTime,
-        var title: String,
-        var description: String,
-        var url: String,
-        var source: String
+    @Id var id: Long,
+    @Column(name = "publish_date") var publishDate: LocalDateTime,
+    @Column(name = "ingest_date") var ingestDate: LocalDateTime,
+    var title: String,
+    var description: String,
+    var url: String,
+    var source: String
 
 )

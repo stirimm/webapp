@@ -7,5 +7,5 @@ import org.springframework.boot.runApplication
 class StirimmWebappApplication
 
 fun main(args: Array<String>) {
-	runApplication<StirimmWebappApplication>(*args)
+    runApplication<StirimmWebappApplication>(*args)
 }
