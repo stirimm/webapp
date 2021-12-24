@@ -28,7 +28,7 @@ class IndexController(
 
 fun News.render() = RenderedNews(
     id = id,
-    title = title.ifBlank { "<Fără titlu>" },
+    title = title.ifBlank { "«Fără titlu»" },
     description = description,
     url = url,
     source = source,
