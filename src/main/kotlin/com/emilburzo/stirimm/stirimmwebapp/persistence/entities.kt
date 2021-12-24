@@ -1,7 +1,6 @@
 package com.emilburzo.stirimm.stirimmwebapp.persistence
 
 import java.time.LocalDateTime
-import java.util.*
 import javax.persistence.Column
 import javax.persistence.Entity
 import javax.persistence.Id

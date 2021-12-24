@@ -1,7 +1,7 @@
 package com.emilburzo.stirimm.stirimmwebapp.controller
 
 import com.emilburzo.stirimm.stirimmwebapp.persistence.News
-import com.emilburzo.stirimm.stirimmwebapp.persistence.NewsRepository
+import com.emilburzo.stirimm.stirimmwebapp.service.NewsService
 import org.ocpsoft.prettytime.PrettyTime
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
@@ -15,12 +15,12 @@ import java.util.*
  */
 @Controller
 class IndexController(
-    private val repository: NewsRepository
+    private val service: NewsService
 ) {
 
     @GetMapping("/")
     fun blog(model: Model): String {
-        model["news"] = repository.findTop200ByOrderByPublishDateDesc().map { it.render() }
+        model["news"] = service.findRecent().map { it.render() }
         return "index"
     }
 
