@@ -2,8 +2,7 @@
 
 set -eux
 
-NAME="stirimm-webapp"
+NAME="registry.emilburzo.com/stirimm-webapp"
+PLATFORMS="linux/amd64,linux/arm64"
 
-mvn clean package
-
-docker build -t ${NAME} .
+docker buildx build --push --platform ${PLATFORMS} -t ${NAME} -t ${NAME}:${BUILD_NUMBER} .

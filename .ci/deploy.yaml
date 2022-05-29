@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stirimm-webapp
+  labels:
+    app: stirimm-webapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: stirimm-webapp
+  template:
+    metadata:
+      labels:
+        app: stirimm-webapp
+    spec:
+      containers:
+        - name: stirimm-webapp
+          image: registry.emilburzo.com/stirimm-webapp:BUILD_NUMBER
+          env:
+            - name: DB_HOST
+              value: 192.168.0.4
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: stirimm-webapp.db
+                  key: username
+                  optional: false
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: stirimm-webapp.db
+                  key: password
+                  optional: false
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: stirimm-webapp
+  labels:
+    run: stirimm-webapp
+spec:
+  ports:
+    - port: 8080
+      protocol: TCP
+  selector:
+    app: stirimm-webapp
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: stirimm-webapp
+spec:
+  rules:
+    - host: stiri.maramures.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: stirimm-webapp
+                port:
+                  number: 8080
