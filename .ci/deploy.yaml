@@ -19,7 +19,11 @@ spec:
           image: registry.emilburzo.com/stirimm-webapp:BUILD_NUMBER
           env:
             - name: DB_HOST
-              value: 192.168.0.4
+              valueFrom:
+                secretKeyRef:
+                  name: stirimm-webapp.db
+                  key: host
+                  optional: false
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
