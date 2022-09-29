@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: stirimm-webapp
-          image: registry.emilburzo.com/stirimm-webapp:BUILD_NUMBER
+          image: emilburzo/stirimm-webapp:latest
           env:
             - name: DB_HOST
               valueFrom:
