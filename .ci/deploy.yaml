@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: stirimm-webapp
-          image: emilburzo/stirimm-webapp:latest
+          image: emilburzo/stirimm-webapp:SHORT_SHA
           env:
             - name: DB_HOST
               valueFrom:
