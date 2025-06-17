@@ -5,7 +5,7 @@
 <div class="news">
     {{#news}}
         <article>
-            <div class="news-item">
+            <div class="news-item" data-news-id="{{id}}">
                 <h2 id="{{id}}" class="news-title">
                     <a href="{{url}}" target="_blank">{{title}}</a>
                 </h2>
@@ -19,5 +19,52 @@
         </article>
     {{/news}}
 </div>
+
+<div id="last-read-marker" style="display: none; text-align: center; margin: 20px 0; padding: 10px; border-top: 2px solid #dc3545; color: #dc3545; font-weight: bold;">
+    Citit până aici
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Get the last read news ID from localStorage
+        const lastReadId = localStorage.getItem('lastReadNewsId');
+        
+        if (lastReadId) {
+            // Find all news items
+            const newsItems = document.querySelectorAll('.news-item');
+            
+            // Check if the last read item is the first item (newest)
+            const firstNewsId = newsItems.length > 0 ? newsItems[0].getAttribute('data-news-id') : null;
+            
+            // If last read is the same as the first item, don't show marker (nothing new)
+            if (lastReadId !== firstNewsId) {
+                // Loop through news items to find the last read one
+                for (let i = 0; i < newsItems.length; i++) {
+                    const newsId = newsItems[i].getAttribute('data-news-id');
+                    
+                    if (newsId === lastReadId) {
+                        // Insert the marker after this news item
+                        const marker = document.getElementById('last-read-marker');
+                        marker.style.display = 'block';
+                        newsItems[i].parentNode.after(marker);
+                        break;
+                    }
+                }
+            }
+            
+            // If the last read item is no longer in the list, don't show any marker
+            // (all content is new to the user)
+        }
+        
+        // Save the current top news ID when leaving the page
+        window.addEventListener('beforeunload', function() {
+            const newsItems = document.querySelectorAll('.news-item');
+            if (newsItems.length > 0) {
+                const topNewsId = newsItems[0].getAttribute('data-news-id');
+                localStorage.setItem('lastReadNewsId', topNewsId);
+            }
+        });
+    });
+</script>
 
 {{> footer}}
