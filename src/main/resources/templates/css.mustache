@@ -37,6 +37,12 @@
 
     .news-item {
         padding-bottom: 10px;
+        border-left: 3px solid #555;
+        padding-left: 15px;
+    }
+
+    .news-item.multi-source {
+        border-left-color: #5a8fa8;
     }
 
     .news-description {
@@ -49,17 +55,49 @@
         text-align: right;
     }
 
-    .news-also {
-        color: #888;
+    .source-expand {
         font-size: 13px;
         text-align: right;
+        margin-top: 2px;
     }
 
-    .news-also a {
-        color: #999;
-    }
-
-    .news-also a:visited {
+    .source-expand summary {
+        cursor: pointer;
         color: #888;
+        list-style: none;
+    }
+
+    .source-expand summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .source-expand summary::before {
+        content: '▸ ';
+        color: #666;
+    }
+
+    .source-expand[open] summary::before {
+        content: '▾ ';
+    }
+
+    .source-expand .source-list {
+        margin-top: 6px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        justify-content: flex-end;
+    }
+
+    .source-expand .source-list a {
+        color: #aaa;
+        font-size: 12px;
+        padding: 2px 8px;
+        background: #3d3d3d;
+        border-radius: 3px;
+    }
+
+    .source-expand .source-list a:hover {
+        background: #4a4a4a;
+        color: #ddd;
     }
 </style>

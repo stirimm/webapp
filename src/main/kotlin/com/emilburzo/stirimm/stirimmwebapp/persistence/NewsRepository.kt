@@ -7,6 +7,6 @@ import org.springframework.data.repository.CrudRepository
  */
 interface NewsRepository : CrudRepository<News, Long> {
 
-    fun findTop200ByOrderByPublishDateDesc(): Iterable<News>
+    fun findTop300ByOrderByPublishDateDesc(): Iterable<News>
 
 }

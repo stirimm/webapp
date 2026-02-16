@@ -1,6 +1,5 @@
 package com.emilburzo.stirimm.stirimmwebapp.controller
 
-import com.emilburzo.stirimm.stirimmwebapp.persistence.News
 import com.emilburzo.stirimm.stirimmwebapp.service.NewsCluster
 import com.emilburzo.stirimm.stirimmwebapp.service.NewsService
 import org.ocpsoft.prettytime.PrettyTime
@@ -26,11 +25,20 @@ class IndexController(
 
 fun NewsCluster.render(): RenderedNews {
     val prettyTime = PrettyTime(Locale("ro"))
-    val alsoHtml = if (duplicates.isNotEmpty()) {
-        duplicates.joinToString(", ") { dup ->
-            "<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\">${escapeHtml(dup.source)}</a>"
-        }
-    } else ""
+
+    // Deduplicate sources (keep first article per unique source)
+    val uniqueDuplicates = duplicates
+        .distinctBy { it.source }
+
+    val count = uniqueDuplicates.size
+    val summary = when {
+        count == 0 -> ""
+        count == 1 -> "și altă 1 sursă"
+        else -> "și alte $count surse"
+    }
+    val sourceChipsHtml = uniqueDuplicates.joinToString("\n") { dup ->
+        "<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\">${escapeHtml(dup.source)}</a>"
+    }
 
     return RenderedNews(
         id = primary.id,
@@ -39,8 +47,9 @@ fun NewsCluster.render(): RenderedNews {
         url = primary.url,
         source = primary.source,
         addedAt = prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())),
-        alsoReportedByHtml = alsoHtml,
-        hasAlsoReportedBy = alsoHtml.isNotEmpty()
+        alsoReportedBySummary = summary,
+        alsoReportedByHtml = sourceChipsHtml,
+        hasAlsoReportedBy = count > 0
     )
 }
 
@@ -54,6 +63,7 @@ data class RenderedNews(
     val url: String,
     val source: String,
     val addedAt: String,
+    val alsoReportedBySummary: String = "",
     val alsoReportedByHtml: String = "",
     val hasAlsoReportedBy: Boolean = false
 )

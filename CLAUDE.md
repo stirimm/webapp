@@ -28,9 +28,10 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 
 Single-page app with one route (`GET /`). Layered architecture:
 
-- **Controller** (`IndexController`) — maps `News` entities to `RenderedNews` (formats dates in Romanian via PrettyTime), passes to `index.mustache`
-- **Service** (`NewsService`) — retrieves top 200 recent news; results cached for 1 minute via Caffeine
-- **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop200ByOrderByPublishDateDesc()`
+- **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML), passes to `index.mustache`
+- **Clustering** (`NewsClusterService`) — groups duplicate articles (same event, different sources) using character trigram Jaccard similarity + union-find. Threshold > 0.35 on `max(titleSim, descSim * 0.9)`. Picks earliest-published as primary.
+- **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached for 1 minute via Caffeine
+- **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop300ByOrderByPublishDateDesc()`
 - **Cache** — Caffeine with 1-entry max, 1-min expiry, stats logged every 30 min by `CacheMonitor`
 
 All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
@@ -53,6 +54,10 @@ Docker image built via GitHub Actions on push to master. Multi-arch (amd64/arm64
 When doing data analysis, exploratory investigations, or prototyping approaches:
 
 - **Document findings** in `.claude-memory/` (project-local, persists across sessions — do NOT use `~/.claude/` which is ephemeral)
-- Create topic-specific files (e.g., `.claude-memory/deduplication-findings.md`) for detailed findings
+- Create topic-specific files for detailed findings
 - Record: what was tested, what worked/didn't, key thresholds/numbers discovered, and why certain approaches were chosen or rejected
 - Include concrete examples from the data (article IDs, similarity scores) so future sessions can verify or build on findings
+
+### Existing memory files
+- `.claude-memory/deduplication-findings.md` — data analysis: duplicate patterns, similarity thresholds, pg_trgm benchmarks, recommended approach
+- `.claude-memory/clustering-implementation.md` — implementation details: algorithm, bugs fixed, UI/UX design decisions, Playwright screenshot testing setup

@@ -13,7 +13,7 @@ class NewsService constructor(
 
     @Cacheable(CACHE_NAME_RECENT_NEWS)
     fun findRecent(): List<NewsCluster> {
-        val articles = repository.findTop200ByOrderByPublishDateDesc().toList()
+        val articles = repository.findTop300ByOrderByPublishDateDesc().toList()
         return clusterService.cluster(articles)
     }
 }

@@ -1,7 +1,7 @@
 # News Deduplication Investigation (2026-02-16)
 
 ## Data Profile
-- 252K articles, 16 sources, ~126 articles/day, 14 active sources on a typical day
+- 252K articles, 16 sources, ~300 articles/day (was ~126/day as of initial profiling — volume has increased), 14 active sources on a typical day
 - Top 200 displayed articles: ~60% have at least one duplicate (same event, different source)
 - On a single day: ~34% of articles are in a duplicate cluster (title sim > 0.35)
 

@@ -6,7 +6,7 @@
 <div class="news">
     {{#news}}
         <article>
-            <div class="news-item" data-news-id="{{id}}">
+            <div class="news-item{{#hasAlsoReportedBy}} multi-source{{/hasAlsoReportedBy}}" data-news-id="{{id}}">
                 <h2 id="{{id}}" class="news-title">
                     <a href="{{url}}" target="_blank">{{title}}</a>
                 </h2>
@@ -18,9 +18,12 @@
                 </div>
 
                 {{#hasAlsoReportedBy}}
-                <div class="news-also">
-                    și de {{{alsoReportedByHtml}}}
-                </div>
+                <details class="source-expand">
+                    <summary>{{{alsoReportedBySummary}}}</summary>
+                    <div class="source-list">
+                        {{{alsoReportedByHtml}}}
+                    </div>
+                </details>
                 {{/hasAlsoReportedBy}}
             </div>
         </article>
