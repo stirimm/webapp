@@ -10,18 +10,18 @@
     {{^isPopular}}<a href="/popular">cele mai populare</a>{{/isPopular}}
 </nav>
 
-<div class="news">
+<main class="news">
     {{#news}}
         <article>
             <div class="news-item" data-news-id="{{id}}">
                 <h2 id="{{id}}" class="news-title">
-                    <a href="{{url}}" target="_blank">{{title}}</a>
+                    <a href="{{url}}" target="_blank" rel="noopener noreferrer">{{title}}</a>
                 </h2>
 
                 <p class="news-description">{{description}} [...]</p>
 
                 <div class="news-meta">
-                    publicat de <strong>{{source}}</strong> cu <strong>{{addedAt}}</strong>
+                    publicat de <strong>{{source}}</strong> <time datetime="{{publishedAtIso}}">cu <strong>{{addedAt}}</strong></time>
                     {{#isPopular}}{{#hasAlsoReportedBy}} · <strong>{{sourceCountLabel}}</strong>{{/hasAlsoReportedBy}}{{/isPopular}}
                 </div>
 
@@ -36,7 +36,7 @@
             </div>
         </article>
     {{/news}}
-</div>
+</main>
 
 <div id="last-read-marker"
      style="display: none; text-align: center; margin: 20px 0; padding: 10px; border-top: 2px solid #dc3545; border-bottom: 2px solid #dc3545; color: #dc3545; font-weight: bold; ">
