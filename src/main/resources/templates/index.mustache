@@ -15,6 +15,12 @@
                 <div class="news-meta">
                     publicat de <strong>{{source}}</strong> cu <strong>{{addedAt}}</strong>
                 </div>
+
+                {{#hasAlsoReportedBy}}
+                <div class="news-also">
+                    și de {{{alsoReportedByHtml}}}
+                </div>
+                {{/hasAlsoReportedBy}}
             </div>
         </article>
     {{/news}}

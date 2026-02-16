@@ -1,6 +1,7 @@
 package com.emilburzo.stirimm.stirimmwebapp.controller
 
 import com.emilburzo.stirimm.stirimmwebapp.persistence.News
+import com.emilburzo.stirimm.stirimmwebapp.service.NewsCluster
 import com.emilburzo.stirimm.stirimmwebapp.service.NewsService
 import org.ocpsoft.prettytime.PrettyTime
 import org.springframework.stereotype.Controller
@@ -10,9 +11,6 @@ import org.springframework.web.bind.annotation.GetMapping
 import java.time.ZoneOffset
 import java.util.*
 
-/**
- * Created by emil on 14.12.2019.
- */
 @Controller
 class IndexController(
     private val service: NewsService
@@ -26,14 +24,28 @@ class IndexController(
 
 }
 
-fun News.render() = RenderedNews(
-    id = id,
-    title = title.ifBlank { "«Fără titlu»" },
-    description = description,
-    url = url,
-    source = source,
-    addedAt = PrettyTime(Locale("ro")).format(Date.from(publishDate.atZone(ZoneOffset.UTC).toInstant()))
-)
+fun NewsCluster.render(): RenderedNews {
+    val prettyTime = PrettyTime(Locale("ro"))
+    val alsoHtml = if (duplicates.isNotEmpty()) {
+        duplicates.joinToString(", ") { dup ->
+            "<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\">${escapeHtml(dup.source)}</a>"
+        }
+    } else ""
+
+    return RenderedNews(
+        id = primary.id,
+        title = primary.title.ifBlank { "«Fără titlu»" },
+        description = primary.description,
+        url = primary.url,
+        source = primary.source,
+        addedAt = prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())),
+        alsoReportedByHtml = alsoHtml,
+        hasAlsoReportedBy = alsoHtml.isNotEmpty()
+    )
+}
+
+private fun escapeHtml(s: String): String =
+    s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;")
 
 data class RenderedNews(
     val id: Long,
@@ -41,7 +53,7 @@ data class RenderedNews(
     val description: String,
     val url: String,
     val source: String,
-    val addedAt: String
+    val addedAt: String,
+    val alsoReportedByHtml: String = "",
+    val hasAlsoReportedBy: Boolean = false
 )
-
-
