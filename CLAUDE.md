@@ -24,7 +24,7 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 
 ## Architecture
 
-**Stack:** Kotlin 1.6 / Spring Boot 2.6 / PostgreSQL / Mustache templates / Maven
+**Stack:** Kotlin 1.9 / Java 21 / Spring Boot 3.4 / PostgreSQL / Mustache templates / Maven
 
 Two-route app (`GET /` chronological, `GET /popular` multi-source sorted by source count). Layered architecture:
 
@@ -47,7 +47,7 @@ All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 
 ## Deployment
 
-Docker image built via GitHub Actions on push to master. Multi-arch (amd64/arm64). Deployed to Kubernetes — see `.ci/deploy.yaml` and `.ci/deploy.sh`. Image tagged with `latest`, run number, and short SHA.
+Docker image built via GitHub Actions on push to master. Multi-arch (amd64/arm64). Distroless runtime image (`gcr.io/distroless/java21-debian12:nonroot`). Deployed to Kubernetes with liveness/readiness probes — see `.ci/deploy.yaml` and `.ci/deploy.sh`. Image tagged with `latest`, run number, and short SHA.
 
 ## Investigation & Research Guidelines
 
