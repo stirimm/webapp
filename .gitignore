@@ -33,3 +33,8 @@ build/
 
 Vagrantfile
 .vagrant
+node_modules
+screenshots
+package-lock.json
+package.json
+screenshot.js
