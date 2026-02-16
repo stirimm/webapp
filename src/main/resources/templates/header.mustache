@@ -6,14 +6,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>Știri din Maramureș - Toată presa locală într-un singur loc</title>
-    <meta name="description" content="Cele mai noi știri din Maramureș, Baia Mare și Sighetu Marmației. Citește presa locală (Vasile Dale, ActualMM, DirectMM) într-un singur loc, actualizat în timp real.">
+    <meta name="description"
+          content="Cele mai noi știri din Maramureș, Baia Mare și Sighetu Marmației. Citește presa locală (Vasile Dale, ActualMM, DirectMM) într-un singur loc, actualizat în timp real.">
     <meta name="keywords" content="stiri maramures, stiri baia mare, presa locala, vasile dale, actualmm, stiri sighet">
 
     <link rel="canonical" href="https://stiri.maramures.io/">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="Știri din Maramureș - Ultimele noutăți locale">
-    <meta property="og:description" content="Agregator de știri din Maramureș. Vezi toate sursele locale într-un singur loc.">
+    <meta property="og:description"
+          content="Agregator de știri din Maramureș. Vezi toate sursele locale într-un singur loc.">
     <meta property="og:url" content="https://stiri.maramures.io/">
     <meta property="og:image" content="https://stiri.maramures.io/apple-touch-icon.png">
 
@@ -23,5 +25,25 @@
     <link rel="manifest" href="/site.webmanifest">
 
     {{> css}}
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "CollectionPage",
+            "headline": "Știri din Maramureș",
+            "description": "Cele mai recente știri din județul Maramureș agregate din surse locale.",
+            "url": "https://stiri.maramures.io/",
+            "mainEntity": {
+                "@type": "ItemList",
+                "itemListElement": [
+                    {
+                        "@type": "ListItem",
+                        "position": 1,
+                        "url": "https://stiri.maramures.io/"
+                    }
+                ]
+            }
+        }
+    </script>
 </head>
 <body>
