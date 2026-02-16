@@ -47,3 +47,12 @@ All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 ## Deployment
 
 Docker image built via GitHub Actions on push to master. Multi-arch (amd64/arm64). Deployed to Kubernetes — see `.ci/deploy.yaml` and `.ci/deploy.sh`. Image tagged with `latest`, run number, and short SHA.
+
+## Investigation & Research Guidelines
+
+When doing data analysis, exploratory investigations, or prototyping approaches:
+
+- **Document findings** in `.claude-memory/` (project-local, persists across sessions — do NOT use `~/.claude/` which is ephemeral)
+- Create topic-specific files (e.g., `.claude-memory/deduplication-findings.md`) for detailed findings
+- Record: what was tested, what worked/didn't, key thresholds/numbers discovered, and why certain approaches were chosen or rejected
+- Include concrete examples from the data (article IDs, similarity scores) so future sessions can verify or build on findings
