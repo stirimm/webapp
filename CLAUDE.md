@@ -1,0 +1,49 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Project Overview
+
+News aggregation webapp for Maramureș region (Romania) — displays recent news items at stiri.maramures.io. Kotlin/Spring Boot backend with server-side Mustache templates. Read-only database; news is ingested by a separate system.
+
+## Build & Run Commands
+
+```bash
+# Build and run tests
+./mvnw clean install
+
+# Build with Maven (CI-style)
+./mvnw --batch-mode --update-snapshots verify
+
+# Run the application (requires DB env vars: DB_HOST, DB_PASS; optional: DB_PORT, DB_NAME, DB_USER)
+./mvnw spring-boot:run
+
+# Run tests only (uses in-memory H2, no external DB needed)
+./mvnw test
+```
+
+## Architecture
+
+**Stack:** Kotlin 1.6 / Spring Boot 2.6 / PostgreSQL / Mustache templates / Maven
+
+Single-page app with one route (`GET /`). Layered architecture:
+
+- **Controller** (`IndexController`) — maps `News` entities to `RenderedNews` (formats dates in Romanian via PrettyTime), passes to `index.mustache`
+- **Service** (`NewsService`) — retrieves top 200 recent news; results cached for 1 minute via Caffeine
+- **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop200ByOrderByPublishDateDesc()`
+- **Cache** — Caffeine with 1-entry max, 1-min expiry, stats logged every 30 min by `CacheMonitor`
+
+All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
+
+**Frontend:** Dark-themed responsive page. Client-side JS uses localStorage to track the last-read news item ID and show a "read until here" marker.
+
+**Templates:** `header.mustache`, `css.mustache`, `index.mustache`, `footer.mustache` in `src/main/resources/templates/`.
+
+## Database
+
+- **Production:** PostgreSQL, configured via env vars (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`). HikariCP pool is read-only (max 3 connections).
+- **Tests:** H2 in-memory (`src/test/resources/application.properties`).
+
+## Deployment
+
+Docker image built via GitHub Actions on push to master. Multi-arch (amd64/arm64). Deployed to Kubernetes — see `.ci/deploy.yaml` and `.ci/deploy.sh`. Image tagged with `latest`, run number, and short SHA.
