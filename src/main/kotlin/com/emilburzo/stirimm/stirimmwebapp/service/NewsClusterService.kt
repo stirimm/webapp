@@ -30,14 +30,17 @@ class NewsClusterService {
         val titleTrigrams = articles.map { trigrams(it.title) }
         val descTrigrams = articles.map { trigrams(it.description.take(500)) }
 
-        // Pairwise comparison — only link articles from different sources
+        // Pairwise comparison
+        // Cross-source: threshold 0.35 (same event covered by different outlets)
+        // Same-source: threshold 0.8 (catch true duplicates, e.g. RSS republish with minor edits)
         for (i in 0 until n) {
             for (j in i + 1 until n) {
-                if (articles[i].source == articles[j].source) continue
+                val sameSource = articles[i].source == articles[j].source
                 val titleSim = jaccardSimilarity(titleTrigrams[i], titleTrigrams[j])
                 val descSim = jaccardSimilarity(descTrigrams[i], descTrigrams[j])
                 val score = maxOf(titleSim, descSim * 0.9)
-                if (score > 0.35) {
+                val threshold = if (sameSource) 0.8 else 0.35
+                if (score > threshold) {
                     union(i, j)
                 }
             }
@@ -49,10 +52,16 @@ class NewsClusterService {
             groups.getOrPut(find(i)) { mutableListOf() }.add(i)
         }
 
-        // For each cluster, pick earliest publishDate as primary
-        // Filter duplicates to only show distinct sources (skip same-source as primary)
+        // For each cluster:
+        // 1. Collapse same-source duplicates — keep latest per source (corrected version)
+        // 2. Among the remaining (one per source), pick earliest as primary (first to report)
         return groups.values.map { indices ->
-            val sorted = indices.sortedBy { articles[it].publishDate }
+            val latestPerSource = indices
+                .groupBy { articles[it].source }
+                .values
+                .map { sourceIndices -> sourceIndices.maxBy { articles[it].publishDate } }
+
+            val sorted = latestPerSource.sortedBy { articles[it].publishDate }
             val primary = articles[sorted.first()]
             NewsCluster(
                 primary = primary,

@@ -94,12 +94,42 @@ class NewsClusterServiceTest {
     }
 
     @Test
-    fun `articles from same source are never clustered`() {
+    fun `same-source identical articles are clustered and latest version is kept`() {
+        val older = makeNews(1, "Accident grav pe DN18 în Baia Mare", "source1",
+            publishDate = LocalDateTime.of(2024, 1, 1, 10, 0))
+        val newer = makeNews(2, "Accident grav pe DN18 în Baia Mare", "source1",
+            publishDate = LocalDateTime.of(2024, 1, 1, 10, 5))
+        val result = service.cluster(listOf(older, newer))
+        assertEquals(1, result.size, "Identical same-source articles should be merged into one cluster")
+        assertEquals(newer.id, result[0].primary.id, "Latest version should be kept as primary")
+        assertTrue(result[0].duplicates.isEmpty(),
+            "Same-source duplicate should not appear in the reported duplicates list")
+    }
+
+    @Test
+    fun `same-source near-duplicate keeps corrected version`() {
+        // Real-world case: RSS feed republishes with title correction
+        val original = makeNews(1,
+            "Încăpățânările politice ale unor consilieri locali din SĂCEL pot duce la pierderea a 1,76 milioane lei. Bani europeni pentru persoane defavorizate",
+            "vasiledale.ro",
+            description = "Situație pur și simplu haluncinantă în comuna maramureșeană Săcel.",
+            publishDate = LocalDateTime.of(2024, 1, 1, 10, 0))
+        val corrected = makeNews(2,
+            "Încăpățânările politice ale unor consilieri locali din SĂCEL pot duce la pierderea a 1,76 milioane lei. Bani pentru persoane defavorizate",
+            "vasiledale.ro",
+            description = "Situație pur și simplu haluncinantă în comuna maramureșeană Săcel.",
+            publishDate = LocalDateTime.of(2024, 1, 1, 10, 5))
+        val result = service.cluster(listOf(original, corrected))
+        assertEquals(1, result.size, "Same-source near-duplicates should be merged")
+        assertEquals(corrected.id, result[0].primary.id, "Corrected (latest) version should be shown")
+    }
+
+    @Test
+    fun `same-source different articles are not clustered`() {
         val a = makeNews(1, "Accident grav pe DN18 în Baia Mare", "source1")
-        val b = makeNews(2, "Accident grav pe DN18 în Baia Mare", "source1")
+        val b = makeNews(2, "Meteo: prognoza pentru weekend în Maramureș", "source1")
         val result = service.cluster(listOf(a, b))
-        assertEquals(2, result.size)
-        assertTrue(result.all { it.duplicates.isEmpty() })
+        assertEquals(2, result.size, "Different articles from same source should stay separate")
     }
 
     @Test
@@ -157,10 +187,11 @@ class NewsClusterServiceTest {
     }
 
     @Test
-    fun `transitive cluster excludes same-source duplicates from reported-by list`() {
-        // A(source1) matches B(source2), B(source2) matches C(source1)
-        // All three cluster together, primary = A (earliest, source1)
-        // Duplicates should NOT include C because C.source == primary.source
+    fun `mixed cluster collapses same-source and keeps cross-source primary logic`() {
+        // A(source1, 10:00), B(source2, 11:00), C(source1, 12:00)
+        // Same-source dedup: source1 keeps C (latest), source2 keeps B
+        // Among [B(11:00), C(12:00)], earliest = B → primary
+        // Duplicates: [C] from source1 (different source than primary)
         val a = makeNews(1, "Accident grav pe DN18 în Baia Mare", "source1",
             publishDate = LocalDateTime.of(2024, 1, 1, 10, 0))
         val b = makeNews(2, "Accident grav pe DN18 în Baia Mare", "source2",
@@ -169,12 +200,10 @@ class NewsClusterServiceTest {
             publishDate = LocalDateTime.of(2024, 1, 1, 12, 0))
         val result = service.cluster(listOf(a, b, c))
         assertEquals(1, result.size)
-        assertEquals(a.id, result[0].primary.id)
-        // Only source2 should appear in duplicates, not source1 again
-        assertTrue(result[0].duplicates.all { it.source != a.source },
-            "Duplicates should not contain articles from the same source as primary")
+        assertEquals(b.id, result[0].primary.id, "source2 is earliest after same-source dedup")
         assertEquals(1, result[0].duplicates.size)
-        assertEquals("source2", result[0].duplicates[0].source)
+        assertEquals("source1", result[0].duplicates[0].source)
+        assertEquals(c.id, result[0].duplicates[0].id, "Latest version from source1 should be kept")
     }
 
     @Test

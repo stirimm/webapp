@@ -11,10 +11,14 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
 - Runs inside the existing Caffeine cache (1-min TTL), so clustering happens at most once per minute
 
 ### Algorithm: Character Trigram Jaccard + Union-Find
-- **Similarity**: `max(titleSim, descSim * 0.9)` with threshold > 0.35
+- **Similarity**: `max(titleSim, descSim * 0.9)` with dual threshold:
+  - **Cross-source**: > 0.35 (same event covered by different outlets)
+  - **Same-source**: > 0.8 (catches RSS republishes/corrections without over-clustering)
 - Description comparison uses first 500 chars (enough for press release copies)
 - **Clustering**: Union-Find (disjoint set) with path compression for transitive grouping
-- **Primary selection**: Earliest `publishDate` in each cluster
+- **Primary selection**: Two-step process:
+  1. Collapse same-source duplicates — keep latest per source (the corrected/updated version)
+  2. Among remaining (one per source), pick earliest `publishDate` as primary (first to report)
 
 ### Key file: `NewsClusterService.kt`
 - `trigrams()` — lowercase, normalize whitespace, extract character 3-grams
@@ -22,6 +26,10 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
 - `cluster()` — pairwise compare, union-find, group, sort by primary date desc
 
 ## Bugs Encountered & Fixed
+
+### Same-source duplicates not clustered (2026-02-16)
+**Problem**: `if (articles[i].source == articles[j].source) continue` skipped all same-source comparisons. When a source republished an article with a minor title edit (e.g., "Bani europeni pentru persoane defavorizate" → "Bani pentru persoane defavorizate"), both appeared as separate items.
+**Fix**: Dual-threshold approach — compare all pairs, use 0.8 threshold for same-source (vs 0.35 for cross-source). Also changed primary selection to collapse same-source duplicates first (keep latest per source = corrected version), then pick earliest across sources.
 
 ### Same source appearing in both primary and duplicates
 **Problem**: Transitive clustering (A[source1] ~ B[source2] ~ C[source1]) puts two articles from the same source in one cluster. When source1 is primary, source1 also appears in duplicates.

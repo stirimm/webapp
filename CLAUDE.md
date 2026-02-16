@@ -29,7 +29,7 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 Two-route app (`GET /` chronological, `GET /popular` multi-source sorted by source count). Layered architecture:
 
 - **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting. Also generates JSON-LD structured data via Jackson `ObjectMapper` and passes `canonicalPath` for per-route SEO tags.
-- **Clustering** (`NewsClusterService`) — groups duplicate articles (same event, different sources) using character trigram Jaccard similarity + union-find. Threshold > 0.35 on `max(titleSim, descSim * 0.9)`. Picks earliest-published as primary.
+- **Clustering** (`NewsClusterService`) — groups duplicate articles using character trigram Jaccard similarity + union-find. Dual threshold on `max(titleSim, descSim * 0.9)`: >0.35 for cross-source (same event, different outlets), >0.8 for same-source (RSS republishes/corrections). Within each cluster, same-source duplicates are collapsed (latest version kept), then earliest-published across sources is picked as primary.
 - **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached for 1 minute via Caffeine
 - **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop300ByOrderByPublishDateDesc()`
 - **Cache** — Caffeine with 1-entry max, 1-min expiry, stats logged every 30 min by `CacheMonitor`
