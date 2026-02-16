@@ -1,9 +1,9 @@
 package com.emilburzo.stirimm.stirimmwebapp.persistence
 
 import java.time.LocalDateTime
-import javax.persistence.Column
-import javax.persistence.Entity
-import javax.persistence.Id
+import jakarta.persistence.Column
+import jakarta.persistence.Entity
+import jakarta.persistence.Id
 
 /**
  * Created by emil on 14.12.2019.
