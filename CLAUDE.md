@@ -26,9 +26,9 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 
 **Stack:** Kotlin 1.6 / Spring Boot 2.6 / PostgreSQL / Mustache templates / Maven
 
-Single-page app with one route (`GET /`). Layered architecture:
+Two-route app (`GET /` chronological, `GET /popular` multi-source sorted by source count). Layered architecture:
 
-- **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML), passes to `index.mustache`
+- **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting
 - **Clustering** (`NewsClusterService`) — groups duplicate articles (same event, different sources) using character trigram Jaccard similarity + union-find. Threshold > 0.35 on `max(titleSim, descSim * 0.9)`. Picks earliest-published as primary.
 - **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached for 1 minute via Caffeine
 - **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop300ByOrderByPublishDateDesc()`
@@ -36,7 +36,7 @@ Single-page app with one route (`GET /`). Layered architecture:
 
 All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 
-**Frontend:** Dark-themed responsive page. Client-side JS uses localStorage to track the last-read news item ID and show a "read until here" marker.
+**Frontend:** Dark-themed responsive page with nav toggle between "cele mai recente" (chronological) and "cele mai populare" (by source count). Client-side JS uses localStorage to track the last-read news item ID and show a "read until here" marker. All news items have uniform gray left border (no blue multi-source distinction).
 
 **Templates:** `header.mustache`, `css.mustache`, `index.mustache`, `footer.mustache` in `src/main/resources/templates/`.
 

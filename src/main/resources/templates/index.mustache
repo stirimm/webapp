@@ -2,11 +2,18 @@
 
 <h1 class="title">Știri din Maramureș</h1>
 <h3 class="subtitle">Toată presa locală într-un singur loc</h3>
+<nav class="nav">
+    {{#isRecent}}<strong>cele mai recente</strong>{{/isRecent}}
+    {{^isRecent}}<a href="/">cele mai recente</a>{{/isRecent}}
+    <span class="nav-sep">·</span>
+    {{#isPopular}}<strong>cele mai populare</strong>{{/isPopular}}
+    {{^isPopular}}<a href="/popular">cele mai populare</a>{{/isPopular}}
+</nav>
 
 <div class="news">
     {{#news}}
         <article>
-            <div class="news-item{{#hasAlsoReportedBy}} multi-source{{/hasAlsoReportedBy}}" data-news-id="{{id}}">
+            <div class="news-item" data-news-id="{{id}}">
                 <h2 id="{{id}}" class="news-title">
                     <a href="{{url}}" target="_blank">{{title}}</a>
                 </h2>
@@ -15,6 +22,7 @@
 
                 <div class="news-meta">
                     publicat de <strong>{{source}}</strong> cu <strong>{{addedAt}}</strong>
+                    {{#isPopular}}{{#hasAlsoReportedBy}} · <strong>{{sourceCountLabel}}</strong>{{/hasAlsoReportedBy}}{{/isPopular}}
                 </div>
 
                 {{#hasAlsoReportedBy}}

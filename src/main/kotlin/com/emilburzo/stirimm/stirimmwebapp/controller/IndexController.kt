@@ -18,6 +18,19 @@ class IndexController(
     @GetMapping("/")
     fun blog(model: Model): String {
         model["news"] = service.findRecent().map { it.render() }
+        model["isRecent"] = true
+        model["isPopular"] = false
+        return "index"
+    }
+
+    @GetMapping("/popular")
+    fun popular(model: Model): String {
+        model["news"] = service.findRecent()
+            .filter { it.duplicates.isNotEmpty() }
+            .sortedByDescending { it.duplicates.distinctBy { d -> d.source }.size + 1 }
+            .map { it.render() }
+        model["isRecent"] = false
+        model["isPopular"] = true
         return "index"
     }
 
@@ -40,6 +53,8 @@ fun NewsCluster.render(): RenderedNews {
         "<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\">${escapeHtml(dup.source)}</a>"
     }
 
+    val sourceCount = uniqueDuplicates.size + 1
+
     return RenderedNews(
         id = primary.id,
         title = primary.title.ifBlank { "«Fără titlu»" },
@@ -49,7 +64,9 @@ fun NewsCluster.render(): RenderedNews {
         addedAt = prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())),
         alsoReportedBySummary = summary,
         alsoReportedByHtml = sourceChipsHtml,
-        hasAlsoReportedBy = count > 0
+        hasAlsoReportedBy = count > 0,
+        sourceCount = sourceCount,
+        sourceCountLabel = "$sourceCount surse"
     )
 }
 
@@ -65,5 +82,7 @@ data class RenderedNews(
     val addedAt: String,
     val alsoReportedBySummary: String = "",
     val alsoReportedByHtml: String = "",
-    val hasAlsoReportedBy: Boolean = false
+    val hasAlsoReportedBy: Boolean = false,
+    val sourceCount: Int = 1,
+    val sourceCountLabel: String = ""
 )

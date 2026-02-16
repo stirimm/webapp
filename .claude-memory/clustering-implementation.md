@@ -1,7 +1,7 @@
 # News Clustering Implementation (2026-02-16)
 
 ## What Was Built
-In-memory trigram-based clustering of the top 200 news articles. Duplicate articles (same event, different sources) are grouped — only the primary (earliest published) is shown, with other sources available via an expandable `<details>` element.
+In-memory trigram-based clustering of the top 300 news articles. Duplicate articles (same event, different sources) are grouped — only the primary (earliest published) is shown, with other sources available via an expandable `<details>` element. Two views: `/` (chronological feed) and `/popular` (multi-source stories sorted by source count). Both views share the same cached data from `NewsService.findRecent()`; the controller filters/sorts for `/popular`.
 
 ## Architecture Decisions
 
@@ -55,16 +55,21 @@ duplicates = sorted.drop(1).map { articles[it] }.filter { it.source != primary.s
 - **Dot-separated meta line** ("source . time . N surse"): Hard to parse three items
 - **Cards layout**: Too much whitespace, fewer articles visible
 
-### Final design
-- Left border: gray (#555) for single-source, blue (#5a8fa8) for multi-source
+### Final design (v2 — two views)
+- **Removed** blue left border for multi-source — all items now use uniform gray (#555) border on both views
+- Two views: `/` (chronological, all clusters) and `/popular` (multi-source only, sorted by source count desc)
+- Nav toggle: "cele mai recente · cele mai populare" — active link is bold, inactive is a link
+- On `/popular` view, source count shown in meta line (e.g. "· **9 surse**")
 - Meta line: "publicat de **source** cu **time**" (unchanged from original)
-- Below meta: "▸ și alte N surse" / "▸ și altă 1 sursă" as `<details>` summary
+- Below meta: "▸ și alte N surse" / "▸ și altă 1 sursă" as `<details>` summary (on both views)
 - Expanded: flex-wrap chips (gray background pills) with source links, right-aligned
 
 ### Mustache template notes
 - Use `{{{tripleMustache}}}` for pre-built HTML (source chips, summary text)
 - Build HTML strings in Kotlin controller — Mustache has no join/last-item helpers
 - `escapeHtml()` utility in controller for user-supplied content in HTML strings
+- Model-level attributes (`isRecent`, `isPopular`) are accessible inside `{{#news}}` list sections via jmustache's parent context fallback
+- `RenderedNews` includes `sourceCount` (int) and `sourceCountLabel` (e.g. "9 surse") for the popular view
 
 ## Playwright Screenshot Testing
 - Install: `npm install playwright` + `npx playwright install chromium` + `npx playwright install-deps chromium`
