@@ -11,11 +11,13 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
 - Runs inside the existing Caffeine cache (1-min TTL), so clustering happens at most once per minute
 
 ### Algorithm: Character Trigram Jaccard + Word-Level Dice + Union-Find
-- **Three scoring signals** (best one wins):
+- All text NFKD-normalized before comparison (strips Unicode mathematical bold/italic + diacritics)
+- **Four scoring signals** (best one wins):
   1. **Title char-trigram Jaccard** — catches similar titles
   2. **Description char-trigram Jaccard × 0.9** — catches copy-pasted press releases
   3. **Description word-level Dice coefficient** — catches same-event articles with different prose but shared entities/numbers/key terms (stop words removed)
-- **Scoring formula**: `max(titleSim, descSim * 0.9, descWordDice)`
+  4. **Title word-level Dice × 0.9** — catches same-event articles covered from different angles that share key entity names (proper nouns, locations) in their titles
+- **Scoring formula**: `max(titleSim, descSim * 0.9, descWordDice, titleWordDice * 0.9)`
 - **Dual threshold**:
   - **Cross-source**: > 0.35 (same event covered by different outlets)
   - **Same-source**: > 0.8 (catches RSS republishes/corrections without over-clustering)
@@ -26,8 +28,9 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
   2. Among remaining (one per source), pick earliest `publishDate` as primary (first to report)
 
 ### Key file: `NewsClusterService.kt`
-- `trigrams()` — lowercase, normalize whitespace, extract character 3-grams
-- `words()` — lowercase, split on non-alphanumeric, filter stop words, keep tokens ≥ 2 chars
+- `normalizeUnicode()` — NFKD decomposition + strip combining marks (normalizes 𝐓𝐀𝐑𝐎𝐌→TAROM, ă→a)
+- `trigrams()` — NFKD-normalize, lowercase, normalize whitespace, extract character 3-grams
+- `words()` — NFKD-normalize, lowercase, split on non-alphanumeric, filter stop words, keep tokens ≥ 2 chars
 - `jaccardSimilarity()` — intersection / union of sets
 - `diceSimilarity()` — Sørensen–Dice coefficient: 2×intersection / (|A|+|B|)
 - `cluster()` — pairwise compare, union-find, group, sort by primary date desc
@@ -69,6 +72,16 @@ duplicates = sorted.drop(1).map { articles[it] }.filter { it.source != primary.s
 - Handball match: descWordDice = 0.38–0.45 → above 0.35 ✓
 - Police false positive: descWordDice ≈ 0.18 → below 0.35 ✓
 **Tests added**: Handball match clustering (positive), two police false-positive rejection tests (negative), unit tests for `words()` and `diceSimilarity()`.
+
+### TAROM flight articles not clustering (2026-02-17)
+**Problem**: 5 articles about TAROM reallocating flights from Satu Mare to Baia Mare appeared as 4 separate items (only maramuresnonstop.ro + emaramures.ro clustered). Different outlets covered different angles: some focused on Satu Mare suspension, others on Baia Mare increase.
+**Root causes**:
+1. **Unicode mathematical bold/italic characters** — 24news.ro uses Unicode styled text (𝐓𝐀𝐑𝐎𝐌, U+1D413+) that `.lowercase()` doesn't normalize to regular ASCII. Title trigram similarity dropped from ~0.18 to ~0.11 due to zero trigram overlap on "TAROM".
+2. **No title word-level signal** — existing signals (char trigrams, desc word Dice) can't capture "same event, different angle" articles. The articles share key entity names (TAROM, Baia Mare, Satu Mare, București) in their titles but use completely different prose.
+**Fix**: Two changes:
+1. **NFKD Unicode normalization** in `trigrams()` and `words()` — `Normalizer.normalize(text, NFKD)` + strip combining marks. Also normalizes diacritics (ă→a, ș→s), improving cross-source matching. Stop words updated to normalized forms.
+2. **Title word Dice × 0.9** as 4th scoring signal — catches articles sharing key title keywords. The 0.9 discount prevents false positives (police reports sharing "permise reținute" score 0.353 × 0.9 = 0.318, safely below 0.35).
+**Results**: A1(bunaziuamaramures.ro)↔A2(24news.ro) via titleWordDice 0.44×0.9=0.40; A1↔A3(actualmm.ro) via 0.40×0.9=0.36. Union-find chains A1-A2-A3 into one cluster. A4(maramuresnonstop.ro+emaramures.ro) remains a second cluster (titleWordDice 0.37×0.9=0.33, just below threshold). Going from 4 separate items to 2 clusters.
 
 ## UI/UX Design Process
 

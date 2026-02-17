@@ -84,8 +84,8 @@ class NewsClusterServiceTest {
         val result = NewsClusterService.words("CS Minaur a câștigat cu CSM Constanța")
         assertTrue("minaur" in result)
         assertTrue("csm" in result)
-        assertTrue("constanța" in result)
-        assertTrue("câștigat" in result)
+        assertTrue("constanta" in result, "diacritics should be normalized (ț→t)")
+        assertTrue("castigat" in result, "diacritics should be normalized (â→a, ș→s)")
         // Stop words should be filtered
         assertFalse("cu" in result, "stop word 'cu' should be filtered")
     }
@@ -314,5 +314,41 @@ class NewsClusterServiceTest {
         assertEquals(2, result.size)
         assertEquals(recent.id, result[0].primary.id)
         assertEquals(old.id, result[1].primary.id)
+    }
+
+    @Test
+    fun `unicode mathematical bold characters are normalized for matching`() {
+        // Real-world: 24news.ro uses Unicode mathematical bold (U+1D400+) for styled text
+        val normal = makeNews(1,
+            "TAROM suspendă zborurile Satu Mare-București",
+            "source1",
+            description = "TAROM a decis să suspende pe termen nedeterminat zborurile dintre București și Satu Mare",
+            publishDate = LocalDateTime.of(2026, 2, 17, 10, 0))
+        val unicodeBold = makeNews(2,
+            "\uD835\uDC13\uD835\uDC00\uD835\uDC11\uD835\uDC0E\uD835\uDC0C suspendă zborurile Satu Mare-București",
+            "source2",
+            description = "TAROM suspendă pe termen nedeterminat zborurile Satu Mare-București",
+            publishDate = LocalDateTime.of(2026, 2, 17, 11, 0))
+        val result = service.cluster(listOf(normal, unicodeBold))
+        assertEquals(1, result.size, "Unicode bold TAROM should match regular TAROM")
+    }
+
+    @Test
+    fun `same-event articles with different angles cluster via title word overlap`() {
+        // Real-world: TAROM cancels Satu Mare flights and increases Baia Mare flights
+        // Different outlets cover different angles but share key entities in titles
+        val satuMareSuspension = makeNews(1,
+            "TAROM renunță la ruta București-Satu Mare și mută frecvența spre Baia Mare",
+            "bunaziuamaramures.ro",
+            description = "TAROM a decis să suspende pe termen nedeterminat zborurile regulate dintre București și Satu Mare",
+            publishDate = LocalDateTime.of(2026, 2, 17, 10, 0))
+        val baiaMaraIncrease = makeNews(2,
+            "VEȘTI EXCELENTE LA AEROPORTUL INTERNAȚIONAL MARAMUREȘ | TAROM dublează miza la Baia Mare: 6 curse săptămânale spre București din martie",
+            "actualmm.ro",
+            description = "Începând cu finalul lunii martie, compania va opera șase curse pe săptămână pe ruta Baia Mare – București, după ce două frecvențe au fost relocate de la Satu Mare",
+            publishDate = LocalDateTime.of(2026, 2, 17, 9, 0))
+        val result = service.cluster(listOf(satuMareSuspension, baiaMaraIncrease))
+        assertEquals(1, result.size,
+            "Articles about same event (TAROM flight reallocation) should cluster via shared title keywords: TAROM, Baia Mare, București")
     }
 }
