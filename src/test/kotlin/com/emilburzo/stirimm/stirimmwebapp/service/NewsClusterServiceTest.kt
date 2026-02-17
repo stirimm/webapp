@@ -77,6 +77,44 @@ class NewsClusterServiceTest {
         assertTrue(NewsClusterService.jaccardSimilarity(a, b) < 0.1)
     }
 
+    // --- Word extraction tests ---
+
+    @Test
+    fun `words extracts lowercase tokens and filters stop words`() {
+        val result = NewsClusterService.words("CS Minaur a câștigat cu CSM Constanța")
+        assertTrue("minaur" in result)
+        assertTrue("csm" in result)
+        assertTrue("constanța" in result)
+        assertTrue("câștigat" in result)
+        // Stop words should be filtered
+        assertFalse("cu" in result, "stop word 'cu' should be filtered")
+    }
+
+    @Test
+    fun `words keeps numbers`() {
+        val result = NewsClusterService.words("scor 26-24 (12-9), etapa 13")
+        assertTrue("26" in result)
+        assertTrue("24" in result)
+        assertTrue("12" in result)
+        assertTrue("13" in result)
+    }
+
+    @Test
+    fun `dice similarity of identical sets`() {
+        val s = setOf("abc", "bcd", "cde")
+        assertEquals(1.0, NewsClusterService.diceSimilarity(s, s))
+    }
+
+    @Test
+    fun `dice similarity of disjoint sets`() {
+        assertEquals(0.0, NewsClusterService.diceSimilarity(setOf("abc"), setOf("xyz")))
+    }
+
+    @Test
+    fun `dice similarity of empty sets`() {
+        assertEquals(0.0, NewsClusterService.diceSimilarity(emptySet(), emptySet()))
+    }
+
     // --- Clustering tests ---
 
     @Test
@@ -204,6 +242,66 @@ class NewsClusterServiceTest {
         assertEquals(1, result[0].duplicates.size)
         assertEquals("source1", result[0].duplicates[0].source)
         assertEquals(c.id, result[0].duplicates[0].id, "Latest version from source1 should be kept")
+    }
+
+    @Test
+    fun `handball match articles from different sources should be clustered`() {
+        // Real-world case: three outlets covering the same handball match (Minaur vs CSM Constanța, 26-24)
+        // with completely different titles but overlapping descriptions
+        val a = makeNews(1,
+            "LIGA ZIMBRILOR – CS Minaur Baia Mare, la a doua victorie consecutivă în campionat",
+            "24news.ro",
+            description = "CS Minaur Baia Mare a învins luni, 16 februarie, pe teren propriu, formația CSM Constanța, scor 26-24 (12-9), într-un joc contând pentru etapa a 13-a a Ligii Zimbrilor la handbal masculin. După o primă repriză cu multe greșeli, în care oaspeții au condus la un moment și cu trei goluri, Minaur a revenit și a controlat jocul.",
+            publishDate = LocalDateTime.of(2026, 2, 16, 22, 0))
+        val b = makeNews(2,
+            "Handbal – Liga Zimbrilor | Victorie cu CSM Constanța și un loc mai sus în clasament",
+            "eziarultau.ro",
+            description = "În joc din etapa 13 de Liga Zimbrilor, CS Minaur a câștigat în această seară meciul disputat pe propriul teren cu CSM Constanța: 26-24 (12-9). Un succes care duce echipa din Baia Mare pe locul 6 în clasamentul momentului, cu 13 puncte. Cândva un derby care decidea configurația podiumului, întâlnirea dintre Baia Mare și Constanța a fost una echilibrată.",
+            publishDate = LocalDateTime.of(2026, 2, 16, 22, 30))
+        val c = makeNews(3,
+            "AU CÂȘTIGAT – Minaur se impune la Baia Mare în meciul cu CSM Constanța și urcă pe locul 6 în clasamentul primei ligi",
+            "2mnews.ro",
+            description = """HANDBAL MASCULIN – LIGA I. Luni, 16 februarie 2026, în Sala Sporturilor „Lascăr Pană" din Baia Mare, în meci contând pentru etapa a 13-a Liga I la handbal masculin, CS Minaur Baia Mare a câștigat, cu 26-24 (12-9), partida cu CSM Constanța. Meciul, arbitrat de buzoianul Ionuț Velișca și gălățeanul Ciprian Popa, a opus echipele clasate pe locurile 6 și 7.""",
+            publishDate = LocalDateTime.of(2026, 2, 16, 21, 0))
+
+        val result = service.cluster(listOf(a, b, c))
+        assertEquals(1, result.size, "All three articles about the same match should be clustered together")
+        assertEquals(2, result[0].duplicates.size, "Should have 2 duplicates (one per additional source)")
+    }
+
+    @Test
+    fun `different police incidents sharing location names should not be clustered`() {
+        // Real-world false positive risk: two different police incidents in the same area
+        // (theft suspect vs drunk driver, both in Baia Mare / Coltău)
+        val theft = makeNews(1,
+            "Lovitură în Baia Mare: suspect din Coltău, reținut. Prejudiciu de 25.000 lei recuperat 100%",
+            "maramuresnonstop.ro",
+            description = """Polițiștii din cadrul Poliției municipiului Baia Mare au reținut pentru 24 de ore un bărbat bănuit de comiterea infracțiunilor de furt calificat și tentativă la furt calificat, în urma unor sesizări și a cercetărilor desfășurate sub coordonarea procurorului de caz. Două fapte, în perioade diferite. Din verificările efectuate a reieșit că bănuitul ar fi sustras mai multe bunuri.""",
+            publishDate = LocalDateTime.of(2026, 2, 15, 14, 0))
+        val drunkDriving = makeNews(2,
+            "Bărbat din Baia Mare, prins băut și fără permis la volan în Coltău",
+            "24news.ro",
+            description = """Astă-noapte, în jurul orei 00:30, polițiștii Secției 1 Poliție Rurală Groși au oprit pentru control un autoturism condus în localitatea Coltău. La volan a fost identificat un bărbat în vârstă de 38 de ani, din Baia Mare. În urma verificărilor efectuate s-a stabilit faptul că acesta nu deține permis de conducere, iar testarea cu aparatul etilotest a indicat o alcoolemie de 0,52 mg/l.""",
+            publishDate = LocalDateTime.of(2026, 2, 15, 10, 0))
+        val result = service.cluster(listOf(theft, drunkDriving))
+        assertEquals(2, result.size, "Different police incidents should not be clustered even if they share location names")
+    }
+
+    @Test
+    fun `different police reports sharing institutional vocabulary should not be clustered`() {
+        // Real-world false positive risk: specific local operation vs national police summary
+        val localOperation = makeNews(1,
+            "Amenzi de peste 10.000 de lei și cinci permise reținute",
+            "graiul.ro",
+            description = """Polițiștii au aplicat sancțiuni de peste 10.000 de lei în cadrul unei acțiuni de tip BLITZ desfășurate pentru reducerea riscului rutier în zona trecerilor la nivel cu calea ferată. Joi, 12 februarie, polițiștii din cadrul Biroului Județean de Poliție Transporturi Maramureș, împreună cu cei ai Biroului Rutier Baia Mare, au organizat o acțiune la nivelul trecerilor la nivel cu calea ferată.""",
+            publishDate = LocalDateTime.of(2026, 2, 13, 16, 0))
+        val nationalSummary = makeNews(2,
+            "Peste 2.300 de intervenții în 24 de ore și 520 de permise reținute",
+            "jurnalmm.ro",
+            description = """Polițiștii au intervenit, în ultimele 24 de ore, la peste 2.300 de solicitări ale cetățenilor, au aplicat peste 10.200 de sancțiuni contravenționale și au reținut 520 de permise de conducere, potrivit unui bilanț transmis de autorități. La data de 13 februarie, polițiștii au acționat la nivel național pentru prevenirea faptelor antisociale, organizând 540 de acțiuni.""",
+            publishDate = LocalDateTime.of(2026, 2, 14, 8, 0))
+        val result = service.cluster(listOf(localOperation, nationalSummary))
+        assertEquals(2, result.size, "Different police reports should not be clustered even if they share institutional vocabulary")
     }
 
     @Test

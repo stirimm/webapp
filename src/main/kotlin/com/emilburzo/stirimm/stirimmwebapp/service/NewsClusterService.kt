@@ -26,11 +26,17 @@ class NewsClusterService {
         }
         fun union(a: Int, b: Int) { parent[find(a)] = find(b) }
 
-        // Precompute trigram sets
+        // Precompute trigram sets and content word sets
         val titleTrigrams = articles.map { trigrams(it.title) }
         val descTrigrams = articles.map { trigrams(it.description.take(500)) }
+        val descWords = articles.map { words(it.description.take(500)) }
 
         // Pairwise comparison
+        // Three scoring signals (best one wins):
+        // 1. Title char-trigram Jaccard — catches similar titles
+        // 2. Description char-trigram Jaccard (×0.9) — catches copy-pasted press releases
+        // 3. Description word-level Dice coefficient (stop words removed) — catches same-event
+        //    articles with different prose but shared entities/numbers/key terms
         // Cross-source: threshold 0.35 (same event covered by different outlets)
         // Same-source: threshold 0.8 (catch true duplicates, e.g. RSS republish with minor edits)
         for (i in 0 until n) {
@@ -38,7 +44,8 @@ class NewsClusterService {
                 val sameSource = articles[i].source == articles[j].source
                 val titleSim = jaccardSimilarity(titleTrigrams[i], titleTrigrams[j])
                 val descSim = jaccardSimilarity(descTrigrams[i], descTrigrams[j])
-                val score = maxOf(titleSim, descSim * 0.9)
+                val descWordDice = diceSimilarity(descWords[i], descWords[j])
+                val score = maxOf(titleSim, descSim * 0.9, descWordDice)
                 val threshold = if (sameSource) 0.8 else 0.35
                 if (score > threshold) {
                     union(i, j)
@@ -73,10 +80,27 @@ class NewsClusterService {
     }
 
     companion object {
+        // Common Romanian stop words — filtered from word-level comparison to focus on
+        // content words (entity names, numbers, domain-specific terms)
+        private val STOP_WORDS = setOf(
+            "al", "am", "ar", "au", "ca", "ce", "cu", "da", "de", "din", "ea", "ei",
+            "el", "eu", "fi", "ia", "ii", "la", "le", "li", "mai", "ne", "ni", "nu",
+            "pe", "sa", "se", "si", "un", "va", "că", "în", "și", "una", "sau", "cum",
+            "dar", "ori", "prin", "sub", "tot", "sunt", "este", "fost", "care", "pentru",
+            "după", "între", "această", "aceasta", "acest", "asupra", "fiind", "într"
+        )
+
         fun trigrams(text: String): Set<String> {
             val normalized = text.lowercase().replace(Regex("\\s+"), " ").trim()
             if (normalized.length < 3) return emptySet()
             return (0..normalized.length - 3).mapTo(mutableSetOf()) { normalized.substring(it, it + 3) }
+        }
+
+        fun words(text: String): Set<String> {
+            return text.lowercase()
+                .split(Regex("[^\\p{L}\\p{N}]+"))
+                .filter { it.length >= 2 && it !in STOP_WORDS }
+                .toSet()
         }
 
         fun jaccardSimilarity(a: Set<String>, b: Set<String>): Double {
@@ -84,6 +108,13 @@ class NewsClusterService {
             val intersection = a.count { it in b }
             val union = a.size + b.size - intersection
             return if (union == 0) 0.0 else intersection.toDouble() / union
+        }
+
+        fun diceSimilarity(a: Set<String>, b: Set<String>): Double {
+            if (a.isEmpty() && b.isEmpty()) return 0.0
+            val intersection = a.count { it in b }
+            val total = a.size + b.size
+            return if (total == 0) 0.0 else 2.0 * intersection / total
         }
     }
 }

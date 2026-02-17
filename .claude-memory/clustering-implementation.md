@@ -10,8 +10,13 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
 - No dependency on `pg_trgm` or any external library
 - Runs inside the existing Caffeine cache (1-min TTL), so clustering happens at most once per minute
 
-### Algorithm: Character Trigram Jaccard + Union-Find
-- **Similarity**: `max(titleSim, descSim * 0.9)` with dual threshold:
+### Algorithm: Character Trigram Jaccard + Word-Level Dice + Union-Find
+- **Three scoring signals** (best one wins):
+  1. **Title char-trigram Jaccard** — catches similar titles
+  2. **Description char-trigram Jaccard × 0.9** — catches copy-pasted press releases
+  3. **Description word-level Dice coefficient** — catches same-event articles with different prose but shared entities/numbers/key terms (stop words removed)
+- **Scoring formula**: `max(titleSim, descSim * 0.9, descWordDice)`
+- **Dual threshold**:
   - **Cross-source**: > 0.35 (same event covered by different outlets)
   - **Same-source**: > 0.8 (catches RSS republishes/corrections without over-clustering)
 - Description comparison uses first 500 chars (enough for press release copies)
@@ -22,8 +27,11 @@ In-memory trigram-based clustering of the top 300 news articles. Duplicate artic
 
 ### Key file: `NewsClusterService.kt`
 - `trigrams()` — lowercase, normalize whitespace, extract character 3-grams
-- `jaccardSimilarity()` — intersection / union of trigram sets
+- `words()` — lowercase, split on non-alphanumeric, filter stop words, keep tokens ≥ 2 chars
+- `jaccardSimilarity()` — intersection / union of sets
+- `diceSimilarity()` — Sørensen–Dice coefficient: 2×intersection / (|A|+|B|)
 - `cluster()` — pairwise compare, union-find, group, sort by primary date desc
+- `STOP_WORDS` — ~50 common Romanian function words filtered from word-level comparison
 
 ## Bugs Encountered & Fixed
 
@@ -49,6 +57,18 @@ duplicates = sorted.drop(1).map { articles[it] }.filter { it.source != primary.s
 ### H2 test data.sql interfering with Spring context
 **Problem**: Creating `src/test/resources/data.sql` for H2 seed data caused Spring Boot context test to fail.
 **Fix**: Removed the file and ran `mvnw clean test` to clear cached target/ artifacts
+
+### Same-event articles with different prose not clustered (2026-02-17)
+**Problem**: Three articles about the same handball match (CS Minaur vs CSM Constanța, 26-24) from 24news.ro, eziarultau.ro, and 2mnews.ro appeared as separate items. Each outlet wrote completely different titles and descriptions, so character trigram Jaccard was below 0.35 for all pairs (title: 0.16–0.25, desc: 0.25–0.31).
+**Root cause**: Character trigrams dilute the signal from shared entities/numbers when surrounded by different prose. Shared content words (Minaur, CSM, Constanța, 26, 24, 12, 13, handbal, etapa) get buried in unique vocabulary.
+**Approaches tested and rejected**:
+- Lowering threshold below 0.35: research showed title sim > 0.25 causes many false positives
+- Combined `(titleSim + descSim) * 0.8`: catches the handball case BUT also creates false positives — police/traffic articles from the same area share institutional vocabulary + location names (e.g., theft vs drunk driving both in Baia Mare/Coltău scored 0.488). Validated against 300 real articles from local DB.
+- Word-level Jaccard (without stop words): scores 0.27–0.32, still below 0.35
+**Fix**: Added word-level Sørensen–Dice coefficient on content words (Romanian stop words removed) as a third scoring signal. Dice is more generous than Jaccard (Dice = 2J/(1+J)) and content word filtering removes generic vocabulary that inflates overlap between unrelated articles.
+- Handball match: descWordDice = 0.38–0.45 → above 0.35 ✓
+- Police false positive: descWordDice ≈ 0.18 → below 0.35 ✓
+**Tests added**: Handball match clustering (positive), two police false-positive rejection tests (negative), unit tests for `words()` and `diceSimilarity()`.
 
 ## UI/UX Design Process
 
