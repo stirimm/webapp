@@ -28,7 +28,8 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 
 Two-route app (`GET /` chronological, `GET /populare` multi-source sorted by source count). `GET /popular` 301-redirects to `/populare`. Layered architecture:
 
-- **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting. Also generates JSON-LD structured data via Jackson `ObjectMapper` and passes `canonicalPath` for per-route SEO tags.
+- **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats relative timestamps, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting. Also generates JSON-LD structured data via Jackson `ObjectMapper` and passes `canonicalPath` for per-route SEO tags.
+- **Relative Time** (`RelativeTime.kt`) — custom Romanian relative time formatter using CLDR plural rules (one/few/other with "de" particle). Replaced PrettyTime library. Output format: "acum X ore", "chiar acum", etc. Tested in `RelativeTimeTest.kt`.
 - **Clustering** (`NewsClusterService`) — groups duplicate articles using character trigram Jaccard similarity + union-find. Dual threshold on `max(titleSim, descSim * 0.9)`: >0.35 for cross-source (same event, different outlets), >0.8 for same-source (RSS republishes/corrections). Within each cluster, same-source duplicates are collapsed (latest version kept), then earliest-published across sources is picked as primary.
 - **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached for 1 minute via Caffeine
 - **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop300ByOrderByPublishDateDesc()`
@@ -36,7 +37,7 @@ Two-route app (`GET /` chronological, `GET /populare` multi-source sorted by sou
 
 All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 
-**Frontend:** Dark-themed responsive page (`system-ui` font stack, no external font dependencies) with nav toggle between "cele mai recente" (chronological) and "cele mai populare" (by source count). Client-side JS uses localStorage to track the last-read news item ID and show a "read until here" marker. All news items have uniform gray left border (no blue multi-source distinction).
+**Frontend:** Dark-themed responsive page (`system-ui` font stack, no external font dependencies) with nav toggle between "cele mai recente" (chronological) and "cele mai populare" (by source count). Client-side JS uses localStorage to track the last-read news item ID and show a "read until here" marker. News item footer uses flexbox: timestamp left ("acum 13 ore"), source info right (plain source name for single-source items, expandable "▸ N surse" for multi-source clusters).
 
 **Templates:** `header.mustache`, `css.mustache`, `index.mustache`, `footer.mustache` in `src/main/resources/templates/`.
 
