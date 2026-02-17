@@ -10,9 +10,18 @@ class NewsService(
 ) {
 
     @Volatile
-    private var cachedClusters: List<NewsCluster> = emptyList()
+    private var cachedClusters: List<NewsCluster>? = null
 
-    fun findRecent(): List<NewsCluster> = cachedClusters
+    fun findRecent(): List<NewsCluster> {
+        // Lazy init: if cache hasn't been populated yet (startup race),
+        // the first request triggers a synchronous load.
+        cachedClusters?.let { return it }
+        synchronized(this) {
+            cachedClusters?.let { return it }
+            refresh()
+            return cachedClusters ?: emptyList()
+        }
+    }
 
     fun refresh() {
         val articles = repository.findTop300ByOrderByPublishDateDesc().toList()

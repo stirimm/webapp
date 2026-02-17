@@ -59,8 +59,12 @@ class NewsChangeListener(
                         val notifications = pgConn.getNotifications(30_000)
                         if (notifications != null && notifications.isNotEmpty()) {
                             logger.info("Received news_changed notification, refreshing cache")
-                            newsService.refresh()
-                            lastKnownMaxId = newsRepository.findMaxId()
+                            try {
+                                newsService.refresh()
+                                lastKnownMaxId = newsRepository.findMaxId()
+                            } catch (e: Exception) {
+                                logger.error("Failed to refresh cache after notification: {}", e.message)
+                            }
                         }
                     }
                 }
