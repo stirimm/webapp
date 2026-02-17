@@ -31,9 +31,9 @@ Two-route app (`GET /` chronological, `GET /populare` multi-source sorted by sou
 - **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats relative timestamps, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting. Also generates JSON-LD structured data via Jackson `ObjectMapper` and passes `canonicalPath` for per-route SEO tags.
 - **Relative Time** (`RelativeTime.kt`) — custom Romanian relative time formatter using CLDR plural rules (one/few/other with "de" particle). Replaced PrettyTime library. Output format: "acum X ore", "chiar acum", etc. Tested in `RelativeTimeTest.kt`.
 - **Clustering** (`NewsClusterService`) — groups duplicate articles using character trigram Jaccard similarity + word-level Dice coefficient + union-find. All text is NFKD-normalized (strips Unicode mathematical bold/italic styling and diacritics) before comparison. Four scoring signals: `max(titleCharSim, descCharSim * 0.9, descWordDice, titleWordDice * 0.9)`. Word-level Dice uses content words (Romanian stop words removed) to catch same-event articles with different prose but shared entities/numbers. Title word Dice catches same-event articles covered from different angles (e.g. "flight cancellation" vs "flight increase") that share key entity names. Dual threshold: >0.35 for cross-source (same event, different outlets), >0.8 for same-source (RSS republishes/corrections). Within each cluster, same-source duplicates are collapsed (latest version kept), then earliest-published across sources is picked as primary.
-- **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached for 1 minute via Caffeine
-- **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom query `findTop300ByOrderByPublishDateDesc()`
-- **Cache** — Caffeine with 1-entry max, 1-min expiry, stats logged every 30 min by `CacheMonitor`
+- **Service** (`NewsService`) — retrieves top 300 recent news, clusters them, returns `List<NewsCluster>`; cached in a `@Volatile` var (no expiry, invalidated on data change)
+- **Persistence** — JPA entity `News` + Spring Data `CrudRepository` with custom queries `findTop300ByOrderByPublishDateDesc()` and `findMaxId()`
+- **Cache invalidation** (`NewsChangeListener`) — PostgreSQL LISTEN/NOTIFY: a DB trigger fires `NOTIFY news_changed` on INSERT into the `news` table; the webapp holds a dedicated non-pooled JDBC connection listening for notifications and refreshes the cache on change. Safety net: `@Scheduled` poll of `MAX(id)` every 5 minutes catches missed notifications from dead connections. Cache is warmed eagerly on startup via `ApplicationReadyEvent`, with lazy-init fallback in `findRecent()` for the startup race window. Connection details are derived from the existing `HikariDataSource` bean (no duplicated `@Value` config). Gracefully degrades on non-PostgreSQL (H2 in tests) — skips LISTEN, uses safety check only.
 
 All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 
@@ -46,6 +46,7 @@ All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 ## Database
 
 - **Production:** PostgreSQL, configured via env vars (`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`). HikariCP pool is read-only (max 3 connections).
+- **Trigger:** `news_insert_notify` — `AFTER INSERT ON news FOR EACH STATEMENT` fires `NOTIFY news_changed`. Defined in `trigger.sql`. PostgreSQL deduplicates NOTIFY within a transaction, so one notification per ingestion run regardless of row count.
 - **Tests:** H2 in-memory (`src/test/resources/application.properties`).
 
 ## Deployment
