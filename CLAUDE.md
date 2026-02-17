@@ -26,7 +26,7 @@ News aggregation webapp for Maramureș region (Romania) — displays recent news
 
 **Stack:** Kotlin 1.9 / Java 21 / Spring Boot 3.4 / PostgreSQL / Mustache templates / Maven
 
-Two-route app (`GET /` chronological, `GET /popular` multi-source sorted by source count). Layered architecture:
+Two-route app (`GET /` chronological, `GET /populare` multi-source sorted by source count). `GET /popular` 301-redirects to `/populare`. Layered architecture:
 
 - **Controller** (`IndexController`) — maps `NewsCluster` to `RenderedNews` (formats dates in Romanian via PrettyTime, builds source chip HTML, computes `sourceCount`), passes to `index.mustache` with `isRecent`/`isPopular` flags for nav highlighting. Also generates JSON-LD structured data via Jackson `ObjectMapper` and passes `canonicalPath` for per-route SEO tags.
 - **Clustering** (`NewsClusterService`) — groups duplicate articles using character trigram Jaccard similarity + union-find. Dual threshold on `max(titleSim, descSim * 0.9)`: >0.35 for cross-source (same event, different outlets), >0.8 for same-source (RSS republishes/corrections). Within each cluster, same-source duplicates are collapsed (latest version kept), then earliest-published across sources is picked as primary.
@@ -40,7 +40,7 @@ All source lives under `src/main/kotlin/com/emilburzo/stirimm/stirimmwebapp/`.
 
 **Templates:** `header.mustache`, `css.mustache`, `index.mustache`, `footer.mustache` in `src/main/resources/templates/`.
 
-**SEO:** Canonical URLs and OG/Twitter meta tags are dynamic per route (via `canonicalPath` model attribute). Schema.org JSON-LD (`CollectionPage` with `ItemList` of `NewsArticle`) is generated server-side by Jackson to avoid Mustache comma-separation issues. Static `robots.txt` and `sitemap.xml` in `src/main/resources/static/`. Articles use `<time datetime>` with ISO dates. No external dependencies (no Google Fonts — user preference).
+**SEO:** Canonical URLs and OG/Twitter meta tags are dynamic per route (via `canonicalPath` model attribute). Schema.org JSON-LD (`CollectionPage` with `ItemList` of `NewsArticle`) is generated server-side by Jackson to avoid Mustache comma-separation issues. Static `robots.txt` and `sitemap.xml` in `src/main/resources/static/`. Articles use `<time datetime>` with ISO dates. No external dependencies (no Google Fonts — user preference). Routes use Romanian paths (e.g. `/populare` not `/popular`).
 
 ## Database
 

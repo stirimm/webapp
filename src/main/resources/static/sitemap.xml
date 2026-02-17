@@ -6,7 +6,7 @@
         <priority>1.0</priority>
     </url>
     <url>
-        <loc>https://stiri.maramures.io/popular</loc>
+        <loc>https://stiri.maramures.io/populare</loc>
         <changefreq>hourly</changefreq>
         <priority>0.8</priority>
     </url>

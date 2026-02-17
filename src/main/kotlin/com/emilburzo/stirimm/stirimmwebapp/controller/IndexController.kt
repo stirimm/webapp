@@ -8,6 +8,7 @@ import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.ui.set
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.servlet.view.RedirectView
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -30,6 +31,9 @@ class IndexController(
     }
 
     @GetMapping("/popular")
+    fun popularRedirect() = RedirectView("/populare").apply { setStatusCode(org.springframework.http.HttpStatus.MOVED_PERMANENTLY) }
+
+    @GetMapping("/populare")
     fun popular(model: Model): String {
         val rendered = service.findRecent()
             .filter { it.duplicates.isNotEmpty() }
@@ -38,8 +42,8 @@ class IndexController(
         model["news"] = rendered
         model["isRecent"] = false
         model["isPopular"] = true
-        model["canonicalPath"] = "/popular"
-        model["jsonLd"] = buildJsonLd("/popular", rendered)
+        model["canonicalPath"] = "/populare"
+        model["jsonLd"] = buildJsonLd("/populare", rendered)
         return "index"
     }
 
