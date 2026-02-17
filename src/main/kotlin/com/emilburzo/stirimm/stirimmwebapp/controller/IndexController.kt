@@ -86,21 +86,16 @@ class IndexController(
 fun NewsCluster.render(): RenderedNews {
     val prettyTime = PrettyTime(Locale("ro"))
 
-    // Deduplicate sources (keep first article per unique source)
-    val uniqueDuplicates = duplicates
-        .distinctBy { it.source }
-
-    val count = uniqueDuplicates.size
-    val summary = when {
-        count == 0 -> ""
-        count == 1 -> "și altă 1 sursă"
-        else -> "și alte $count surse"
-    }
-    val sourceChipsHtml = uniqueDuplicates.joinToString("\n") { dup ->
-        "<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(dup.source)}</a>"
-    }
-
+    val uniqueDuplicates = duplicates.distinctBy { it.source }
     val sourceCount = uniqueDuplicates.size + 1
+
+    // All sources: primary first, then duplicates
+    val allSourcesHtml = buildList {
+        add("<a href=\"${escapeHtml(primary.url)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(primary.source)}</a>")
+        uniqueDuplicates.forEach { dup ->
+            add("<a href=\"${escapeHtml(dup.url)}\" target=\"_blank\" rel=\"noopener noreferrer\">${escapeHtml(dup.source)}</a>")
+        }
+    }.joinToString("\n")
 
     return RenderedNews(
         id = primary.id,
@@ -108,13 +103,12 @@ fun NewsCluster.render(): RenderedNews {
         description = primary.description,
         url = primary.url,
         source = primary.source,
-        addedAt = prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())),
+        addedAt = "acum " + prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())).removeSuffix(" in urma"),
         publishedAtIso = primary.publishDate.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
-        alsoReportedBySummary = summary,
-        alsoReportedByHtml = sourceChipsHtml,
-        hasAlsoReportedBy = count > 0,
+        sourcesHtml = allSourcesHtml,
         sourceCount = sourceCount,
-        sourceCountLabel = "$sourceCount surse"
+        sourceCountLabel = if (sourceCount == 1) "1 sursă" else "$sourceCount surse",
+        hasMultipleSources = sourceCount > 1
     )
 }
 
@@ -129,9 +123,8 @@ data class RenderedNews(
     val source: String,
     val addedAt: String,
     val publishedAtIso: String,
-    val alsoReportedBySummary: String = "",
-    val alsoReportedByHtml: String = "",
-    val hasAlsoReportedBy: Boolean = false,
+    val sourcesHtml: String = "",
     val sourceCount: Int = 1,
-    val sourceCountLabel: String = ""
+    val sourceCountLabel: String = "1 sursă",
+    val hasMultipleSources: Boolean = false
 )

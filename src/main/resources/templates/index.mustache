@@ -20,19 +20,20 @@
 
                 <p class="news-description">{{description}} [...]</p>
 
-                <div class="news-meta">
-                    publicat de <strong>{{source}}</strong> <time datetime="{{publishedAtIso}}">cu <strong>{{addedAt}}</strong></time>
-                    {{#isPopular}}{{#hasAlsoReportedBy}} · <strong>{{sourceCountLabel}}</strong>{{/hasAlsoReportedBy}}{{/isPopular}}
+                <div class="news-footer">
+                    <time class="news-meta" datetime="{{publishedAtIso}}">{{addedAt}}</time>
+                    {{#hasMultipleSources}}
+                    <details class="source-expand">
+                        <summary>{{sourceCountLabel}}</summary>
+                        <div class="source-list">
+                            {{{sourcesHtml}}}
+                        </div>
+                    </details>
+                    {{/hasMultipleSources}}
+                    {{^hasMultipleSources}}
+                    <span class="source-label">{{source}}</span>
+                    {{/hasMultipleSources}}
                 </div>
-
-                {{#hasAlsoReportedBy}}
-                <details class="source-expand">
-                    <summary>{{{alsoReportedBySummary}}}</summary>
-                    <div class="source-list">
-                        {{{alsoReportedByHtml}}}
-                    </div>
-                </details>
-                {{/hasAlsoReportedBy}}
             </div>
         </article>
     {{/news}}
