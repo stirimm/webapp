@@ -1,17 +1,17 @@
 package com.emilburzo.stirimm.stirimmwebapp.controller
 
+import com.emilburzo.stirimm.stirimmwebapp.formatTimeAgo
 import com.emilburzo.stirimm.stirimmwebapp.service.NewsCluster
 import com.emilburzo.stirimm.stirimmwebapp.service.NewsService
 import com.fasterxml.jackson.databind.ObjectMapper
-import org.ocpsoft.prettytime.PrettyTime
 import org.springframework.stereotype.Controller
 import org.springframework.ui.Model
 import org.springframework.ui.set
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.servlet.view.RedirectView
+import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.*
 
 @Controller
 class IndexController(
@@ -83,9 +83,7 @@ class IndexController(
 
 }
 
-fun NewsCluster.render(): RenderedNews {
-    val prettyTime = PrettyTime(Locale("ro"))
-
+fun NewsCluster.render(now: LocalDateTime = LocalDateTime.now(ZoneOffset.UTC)): RenderedNews {
     val uniqueDuplicates = duplicates.distinctBy { it.source }
     val sourceCount = uniqueDuplicates.size + 1
 
@@ -103,7 +101,7 @@ fun NewsCluster.render(): RenderedNews {
         description = primary.description,
         url = primary.url,
         source = primary.source,
-        addedAt = "acum " + prettyTime.format(Date.from(primary.publishDate.atZone(ZoneOffset.UTC).toInstant())).removeSuffix(" in urma"),
+        addedAt = formatTimeAgo(primary.publishDate, now),
         publishedAtIso = primary.publishDate.atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
         sourcesHtml = allSourcesHtml,
         sourceCount = sourceCount,
