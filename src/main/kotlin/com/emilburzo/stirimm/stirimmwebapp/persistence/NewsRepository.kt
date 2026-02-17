@@ -1,12 +1,13 @@
 package com.emilburzo.stirimm.stirimmwebapp.persistence
 
+import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 
-/**
- * Created by emil on 14.12.2019.
- */
 interface NewsRepository : CrudRepository<News, Long> {
 
     fun findTop300ByOrderByPublishDateDesc(): Iterable<News>
+
+    @Query("SELECT MAX(n.id) FROM News n")
+    fun findMaxId(): Long?
 
 }

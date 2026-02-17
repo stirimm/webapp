@@ -1,19 +1,21 @@
 package com.emilburzo.stirimm.stirimmwebapp.service
 
 import com.emilburzo.stirimm.stirimmwebapp.persistence.NewsRepository
-import com.emilburzo.stirimm.stirimmwebapp.persistence.cache.CACHE_NAME_RECENT_NEWS
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.stereotype.Service
 
 @Service
-class NewsService constructor(
+class NewsService(
     private val repository: NewsRepository,
     private val clusterService: NewsClusterService
 ) {
 
-    @Cacheable(CACHE_NAME_RECENT_NEWS)
-    fun findRecent(): List<NewsCluster> {
+    @Volatile
+    private var cachedClusters: List<NewsCluster> = emptyList()
+
+    fun findRecent(): List<NewsCluster> = cachedClusters
+
+    fun refresh() {
         val articles = repository.findTop300ByOrderByPublishDateDesc().toList()
-        return clusterService.cluster(articles)
+        cachedClusters = clusterService.cluster(articles)
     }
 }
