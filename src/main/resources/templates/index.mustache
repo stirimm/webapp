@@ -39,12 +39,12 @@
     {{/news}}
 </main>
 
+{{#isRecent}}
 <div id="last-read-marker"
      style="display: none; text-align: center; margin: 20px 0; padding: 10px; border-top: 2px solid #dc3545; border-bottom: 2px solid #dc3545; color: #dc3545; font-weight: bold; ">
     ai citit până aici
 </div>
 
-{{#isRecent}}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         // Get the last read news ID from localStorage
